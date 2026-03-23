@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "CineMatch API",
+    "name": "OMDB - API",
     "description": "Complete API collection for Movie Recommendation System",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
