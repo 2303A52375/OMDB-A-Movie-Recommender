@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OMDB - A Movie Recommender</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── CSS Variables ─────────────────────────────────────── */
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #111118;
+      --bg3: #1a1a24;
+      --card: #13131c;
+      --card2: #1c1c28;
+      --border: #2a2a3a;
+      --accent: #e63946;
+      --accent2: #ff6b6b;
+      --gold: #f4a261;
+      --text: #f0f0f8;
+      --text2: #9898b8;
+      --text3: #5a5a7a;
+      --success: #2ec27e;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+      --shadow-card: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    /* ── Reset & Base ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; font-family: inherit; }
+    img { max-width: 100%; display: block; }
+    input, select, textarea { font-family: inherit; }
+
+    /* ── Scrollbar ─────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Utility ───────────────────────────────────────────── */
+    .hidden { display: none !important; }
+    .flex { display: flex; }
+    .flex-col { display: flex; flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-1 { gap: 8px; }
+    .gap-2 { gap: 16px; }
+    .gap-3 { gap: 24px; }
+    .w-full { width: 100%; }
+    .text-center { text-align: center; }
+    .mt-1 { margin-top: 8px; }
+    .mt-2 { margin-top: 16px; }
+    .mt-3 { margin-top: 24px; }
+
+    /* ── Typography ────────────────────────────────────────── */
+    h1, h2, h3, h4 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
+    .display { font-size: clamp(48px, 8vw, 96px); line-height: 0.95; }
+    .section-title { font-size: 28px; color: var(--text); }
+    .mono { font-family: 'DM Mono', monospace; }
+
+    /* ── Animations ────────────────────────────────────────── */
+    @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .animate-in { animation: fadeIn 0.4s ease both; }
+
+    /* ── Loader ────────────────────────────────────────────── */
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .page-loader {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 20px; z-index: 9999;
+    }
+
+    /* ── Navbar ────────────────────────────────────────────── */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,10,15,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px; letter-spacing: 0.06em;
+      color: var(--text);
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-btn {
+      padding: 8px 18px; border-radius: var(--radius-sm);
+      border: none; font-size: 14px; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .nav-btn-ghost {
+      background: transparent; color: var(--text2);
+    }
+    .nav-btn-ghost:hover { color: var(--text); background: var(--bg3); }
+    .nav-btn-primary {
+      background: var(--accent); color: white;
+    }
+    .nav-btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+    .nav-search {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 6px 14px;
+      transition: border-color 0.2s;
+    }
+    .nav-search:focus-within { border-color: var(--accent); }
+    .nav-search input {
+      background: transparent; border: none; outline: none;
+      color: var(--text); font-size: 14px; width: 180px;
+    }
+    .nav-search input::placeholder { color: var(--text3); }
+    .avatar-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--accent); border: none;
+      color: white; font-weight: 600; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .avatar-btn:hover { transform: scale(1.08); }
+    .mobile-menu-btn {
+      display: none; background: transparent; border: none;
+      color: var(--text); font-size: 24px; padding: 4px;
+    }
+
+    /* ── Page Views ────────────────────────────────────────── */
+    .page { display: none; min-height: calc(100vh - 64px); }
+    .page.active { display: block; animation: fadeIn 0.3s ease; }
+
+    /* ── Landing Page ──────────────────────────────────────── */
+    .hero {
+      position: relative; overflow: hidden;
+      min-height: 90vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 60px 24px; text-align: center;
+    }
+    .hero-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse at 20% 60%, rgba(230,57,70,0.18) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 30%, rgba(244,162,97,0.1) 0%, transparent 50%),
+                  radial-gradient(ellipse at 50% 100%, rgba(100,100,200,0.08) 0%, transparent 60%);
+    }
+    .hero-grid {
+      position: absolute; inset: 0; z-index: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at 50% 50%, black 40%, transparent 80%);
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 800px; }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(230,57,70,0.12); border: 1px solid rgba(230,57,70,0.3);
+      color: var(--accent2); border-radius: 100px;
+      padding: 6px 16px; font-size: 13px; font-weight: 500;
+      margin-bottom: 24px; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .hero h1 { color: var(--text); margin-bottom: 20px; }
+    .hero h1 span { color: var(--accent); display: block; }
+    .hero-desc {
+      font-size: 18px; color: var(--text2); max-width: 520px;
+      margin: 0 auto 36px; line-height: 1.7;
+    }
+    .hero-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      padding: 14px 32px; border-radius: var(--radius); border: none;
+      font-size: 16px; font-weight: 500; transition: all 0.25s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(230,57,70,0.3); }
+    .btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--card2); transform: translateY(-2px); }
+    .btn-sm { padding: 8px 20px; font-size: 14px; border-radius: var(--radius-sm); }
+    .btn-icon {
+      padding: 8px; border-radius: var(--radius-sm); border: none;
+      background: var(--bg3); color: var(--text2); font-size: 16px;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover { color: var(--accent); background: rgba(230,57,70,0.1); }
+    .btn-icon.active { color: var(--accent); background: rgba(230,57,70,0.15); }
+
+    .hero-stats {
+      margin-top: 60px; display: flex; gap: 48px; justify-content: center;
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-num {
+      font-family: 'Bebas Neue', sans-serif; font-size: 40px;
+      color: var(--accent);
+    }
+    .stat-label { font-size: 13px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+
+    .features-section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-top: 40px; }
+    .feature-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+      transition: all 0.3s; position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 2px; background: linear-gradient(90deg, var(--accent), var(--gold));
+      transform: scaleX(0); transform-origin: left; transition: transform 0.3s;
+    }
+    .feature-card:hover::before { transform: scaleX(1); }
+    .feature-card:hover { border-color: rgba(230,57,70,0.3); transform: translateY(-4px); }
+    .feature-icon { font-size: 32px; margin-bottom: 16px; }
+    .feature-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; margin-bottom: 8px; }
+    .feature-desc { color: var(--text2); font-size: 14px; line-height: 1.6; }
+
+    /* ── Auth Pages ────────────────────────────────────────── */
+    .auth-page {
+      min-height: calc(100vh - 64px); display: flex;
+      align-items: center; justify-content: center; padding: 40px 24px;
+    }
+    .auth-card {
+      width: 100%; max-width: 440px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 40px;
+      animation: fadeIn 0.4s ease;
+    }
+    .auth-header { margin-bottom: 32px; }
+    .auth-header h2 { font-size: 36px; margin-bottom: 8px; }
+    .auth-header p { color: var(--text2); font-size: 15px; }
+    .form-group { margin-bottom: 20px; }
+    .form-label {
+      display: block; font-size: 13px; font-weight: 500;
+      color: var(--text2); margin-bottom: 8px; text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .form-input {
+      width: 100%; padding: 12px 16px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 15px; outline: none; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input::placeholder { color: var(--text3); }
+    .form-error { color: var(--accent); font-size: 13px; margin-top: 6px; }
+    .form-submit {
+      width: 100%; padding: 14px; background: var(--accent); color: white;
+      border: none; border-radius: var(--radius-sm); font-size: 16px;
+      font-weight: 500; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .form-submit:hover { background: var(--accent2); transform: translateY(-1px); }
+    .form-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .auth-footer { margin-top: 24px; text-align: center; font-size: 14px; color: var(--text2); }
+    .auth-footer a { color: var(--accent); font-weight: 500; cursor: pointer; }
+    .auth-footer a:hover { text-decoration: underline; }
+    .genre-select {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+    }
+    .genre-chip {
+      padding: 6px 14px; border-radius: 100px; font-size: 13px;
+      border: 1px solid var(--border); background: var(--bg3);
+      color: var(--text2); cursor: pointer; transition: all 0.2s;
+    }
+    .genre-chip:hover { border-color: var(--accent); color: var(--text); }
+    .genre-chip.selected { background: var(--accent); border-color: var(--accent); color: white; }
+
+    /* ── Dashboard ─────────────────────────────────────────── */
+    .dashboard { padding: 32px 24px; max-width: 1280px; margin: 0 auto; }
+    .dashboard-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 32px; flex-wrap: wrap; gap: 16px;
+    }
+    .welcome { font-size: 14px; color: var(--text3); margin-bottom: 4px; }
+    .section { margin-bottom: 48px; }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .see-all { font-size: 13px; color: var(--accent); cursor: pointer; }
+    .see-all:hover { text-decoration: underline; }
+
+    /* ── Search Bar ────────────────────────────────────────── */
+    .search-bar {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 20px; margin-bottom: 32px;
+      transition: border-color 0.2s;
+    }
+    .search-bar:focus-within { border-color: var(--accent); }
+    .search-bar input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text); font-size: 16px;
+    }
+    .search-bar input::placeholder { color: var(--text3); }
+
+    /* ── Genre Filter ──────────────────────────────────────── */
+    .genre-filter {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px;
+    }
+    .filter-chip {
+      padding: 7px 18px; border-radius: 100px; font-size: 13px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .filter-chip:hover { border-color: var(--accent); color: var(--text); }
+    .filter-chip.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+    /* ── Movie Grid ────────────────────────────────────────── */
+    .movies-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .movie-card {
+      background: var(--card); border-radius: var(--radius);
+      overflow: hidden; border: 1px solid var(--border);
+      transition: all 0.3s; cursor: pointer; position: relative;
+    }
+    .movie-card:hover { transform: translateY(-6px); border-color: rgba(230,57,70,0.4); box-shadow: var(--shadow); }
+    .movie-poster {
+      width: 100%; aspect-ratio: 2/3; object-fit: cover;
+      background: var(--bg3);
+    }
+    .movie-poster-placeholder {
+      width: 100%; aspect-ratio: 2/3;
+      background: var(--bg3); display: flex; align-items: center;
+      justify-content: center; font-size: 40px; color: var(--text3);
+    }
+    .movie-info { padding: 14px; }
+    .movie-title {
+      font-weight: 600; font-size: 14px; margin-bottom: 6px;
+      display: -webkit-box; -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;
+    }
+    .movie-meta { display: flex; align-items: center; justify-content: space-between; }
+    .movie-rating {
+      display: flex; align-items: center; gap: 4px;
+      color: var(--gold); font-size: 13px; font-weight: 500;
+    }
+    .movie-year { font-size: 12px; color: var(--text3); }
+    .movie-genres {
+      display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px;
+    }
+    .genre-badge {
+      font-size: 11px; padding: 3px 8px; border-radius: 4px;
+      background: rgba(230,57,70,0.12); color: var(--accent2);
+      border: 1px solid rgba(230,57,70,0.2);
+    }
+    .movie-actions {
+      position: absolute; top: 8px; right: 8px;
+      display: flex; flex-direction: column; gap: 6px;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .movie-card:hover .movie-actions { opacity: 1; }
+    .action-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1);
+      color: white; font-size: 14px; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; transition: all 0.2s;
+      backdrop-filter: blur(4px);
+    }
+    .action-btn:hover { background: var(--accent); border-color: var(--accent); transform: scale(1.1); }
+    .action-btn.active { background: var(--accent); border-color: var(--accent); }
+    .trending-badge {
+      position: absolute; top: 8px; left: 8px;
+      background: var(--accent); color: white; font-size: 11px;
+      font-weight: 600; padding: 3px 8px; border-radius: 4px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Horizontal Scroll Row ─────────────────────────────── */
+    .movies-row {
+      display: flex; gap: 16px; overflow-x: auto; padding-bottom: 12px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    .movies-row::-webkit-scrollbar { height: 4px; }
+    .movies-row .movie-card { min-width: 160px; flex-shrink: 0; }
+    .movies-row .movie-card:hover { transform: translateY(-4px) scale(1.02); }
+
+    /* ── Movie Modal ───────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      z-index: 1000; display: flex; align-items: center;
+      justify-content: center; padding: 20px;
+      animation: fadeIn 0.2s ease;
+      backdrop-filter: blur(4px);
+    }
+    .modal {
+      background: var(--card); border-radius: var(--radius);
+      border: 1px solid var(--border); width: 100%; max-width: 720px;
+      max-height: 90vh; overflow-y: auto;
+      animation: fadeIn 0.3s ease;
+    }
+    .modal-backdrop {
+      width: 100%; height: 260px; object-fit: cover;
+      background: var(--bg3); position: relative;
+    }
+    .modal-backdrop-img { width: 100%; height: 100%; object-fit: cover; }
+    .modal-backdrop-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 60%;
+      background: linear-gradient(transparent, var(--card));
+    }
+    .modal-body { padding: 24px; }
+    .modal-title { font-size: 36px; margin-bottom: 8px; line-height: 1; }
+    .modal-meta {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      margin-bottom: 20px; font-size: 14px; color: var(--text2);
+    }
+    .modal-rating { display: flex; align-items: center; gap: 4px; color: var(--gold); font-weight: 600; }
+    .modal-overview { color: var(--text2); line-height: 1.7; margin-bottom: 20px; }
+    .modal-cast {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+    }
+    .cast-tag {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 4px 12px; font-size: 13px; color: var(--text2);
+    }
+    .modal-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.2);
+      color: white; font-size: 18px; display: flex;
+      align-items: center; justify-content: center; cursor: pointer;
+      backdrop-filter: blur(4px); transition: all 0.2s;
+    }
+    .modal-close:hover { background: var(--accent); }
+    .modal-backdrop { position: relative; }
+
+    /* ── Profile Page ──────────────────────────────────────── */
+    .profile-page { padding: 40px 24px; max-width: 900px; margin: 0 auto; }
+    .profile-header {
+      display: flex; align-items: center; gap: 24px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px; margin-bottom: 32px;
+    }
+    .profile-avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: var(--accent); display: flex; align-items: center;
+      justify-content: center; font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px; color: white; flex-shrink: 0;
+    }
+    .profile-info h2 { font-size: 32px; }
+    .profile-info p { color: var(--text2); font-size: 14px; }
+    .profile-stats { display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap; }
+    .profile-stat { font-size: 13px; color: var(--text2); }
+    .profile-stat strong { color: var(--text); }
+    .profile-section {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px; margin-bottom: 24px;
+    }
+    .profile-section h3 { font-size: 22px; margin-bottom: 20px; }
+    .pref-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pref-chip {
+      padding: 8px 16px; border-radius: 100px; font-size: 13px;
+      border: 1px solid var(--border); background: var(--bg3); color: var(--text2);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .pref-chip:hover { border-color: var(--accent); }
+    .pref-chip.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+    /* ── Empty State ───────────────────────────────────────── */
+    .empty-state {
+      text-align: center; padding: 60px 24px; color: var(--text3);
+    }
+    .empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
+    .empty-state p { font-size: 16px; }
+
+    /* ── Toast ─────────────────────────────────────────────── */
+    .toast-container {
+      position: fixed; bottom: 24px; right: 24px;
+      z-index: 9999; display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      background: var(--card2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 20px;
+      font-size: 14px; display: flex; align-items: center; gap: 10px;
+      box-shadow: var(--shadow); animation: slideIn 0.3s ease;
+      max-width: 300px;
+    }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error { border-left: 3px solid var(--accent); }
+    .toast.info { border-left: 3px solid #60a5fa; }
+
+    /* ── Skeleton ──────────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg3) 25%, var(--card2) 50%, var(--bg3) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-sm);
+    }
+    .skeleton-card { height: 280px; border-radius: var(--radius); }
+
+    /* ── Responsive ────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .nav-search { display: none; }
+      .mobile-menu-btn { display: block; }
+      .nav-links.mobile-open { 
+        position: fixed; top: 64px; left: 0; right: 0;
+        background: var(--bg2); border-bottom: 1px solid var(--border);
+        flex-direction: column; align-items: stretch; padding: 16px;
+        gap: 8px;
+      }
+      .nav-links:not(.mobile-open) .nav-btn { display: none; }
+      .movies-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+      .profile-header { flex-direction: column; text-align: center; }
+      .hero-stats { gap: 24px; }
+      .auth-card { padding: 24px; }
+      .modal-body { padding: 16px; }
+      .dashboard { padding: 20px 16px; }
+    }
+    @media (max-width: 480px) {
+      .movies-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .btn { padding: 12px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Navbar -->
+<nav class="navbar" id="navbar">
+  <div class="nav-logo">OM<span>DB</span></div>
+  <button class="mobile-menu-btn" onclick="toggleMobileMenu()" id="mobileMenuBtn">☰</button>
+  <div class="nav-links" id="navLinks">
+    <!-- Populated by JS -->
+  </div>
+</nav>
+
+<!-- Pages -->
+<div id="page-landing" class="page active">
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-content animate-in">
+      <div class="hero-tag">🎬 AI-Powered Recommendations</div>
+      <h1 class="display">Your Perfect<span>Movie Awaits</span></h1>
+      <p class="hero-desc">Discover films tailored to your taste. Powered by personalized algorithms that learn what you love.</p>
+      <div class="hero-btns">
+        <button class="btn btn-primary" onclick="navigate('register')">🚀 Get Started Free</button>
+        <button class="btn btn-secondary" onclick="navigate('dashboard')">Explore Movies</button>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><div class="stat-num">15K+</div><div class="stat-label">Movies</div></div>
+        <div class="stat"><div class="stat-num">50+</div><div class="stat-label">Genres</div></div>
+        <div class="stat"><div class="stat-num">99%</div><div class="stat-label">Accuracy</div></div>
+      </div>
+    </div>
+  </section>
+  <!-- Features -->
+  <section class="features-section">
+    <h2 class="section-title text-center">Why CineMatch?</h2>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feature-icon">🎯</div><h3 class="feature-title">Smart Recommendations</h3><p class="feature-desc">Content-based filtering learns your genre preferences and suggests movies you'll actually love.</p></div>
+      <div class="feature-card"><div class="feature-icon">🔥</div><h3 class="feature-title">Trending Now</h3><p class="feature-desc">Stay current with what's hot. See what's trending globally and among your genre preferences.</p></div>
+      <div class="feature-card"><div class="feature-icon">🗂️</div><h3 class="feature-title">Watchlist & Favorites</h3><p class="feature-desc">Save movies to watch later or mark them as favorites. Your collection, your way.</p></div>
+      <div class="feature-card"><div class="feature-icon">🔍</div><h3 class="feature-title">Powerful Search</h3><p class="feature-desc">Find any movie instantly. Search by title, director, cast, or even mood and theme.</p></div>
+    </div>
+  </section>
+</div>
+
+<div id="page-login" class="page">
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h2>Welcome Back</h2>
+        <p>Sign in to your CineMatch account</p>
+      </div>
+      <div id="loginError" class="form-error" style="margin-bottom:16px;display:none;"></div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="loginEmail" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="loginPassword" placeholder="••••••••" />
+      </div>
+      <button class="form-submit" id="loginBtn" onclick="handleLogin()">
+        Sign In
+      </button>
+      <div class="auth-footer">
+        Don't have an account? <a onclick="navigate('register')">Create one</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-register" class="page">
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h2>Join CineMatch</h2>
+        <p>Create your account and start discovering</p>
+      </div>
+      <div id="registerError" class="form-error" style="margin-bottom:16px;display:none;"></div>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" type="text" id="regName" placeholder="John Doe" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="regEmail" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="regPassword" placeholder="Min. 6 characters" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Favorite Genres (pick any)</label>
+        <div class="genre-select" id="regGenres">
+          <!-- populated by JS -->
+        </div>
+      </div>
+      <button class="form-submit" id="registerBtn" onclick="handleRegister()">
+        Create Account
+      </button>
+      <div class="auth-footer">
+        Already have an account? <a onclick="navigate('login')">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-dashboard" class="page">
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <div>
+        <p class="welcome" id="dashWelcome">Good evening!</p>
+        <h2 class="section-title" id="dashTitle">Discover Movies</h2>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Search movies, directors, cast..." oninput="debounceSearch(this.value)" />
+      <button class="btn-icon" id="clearSearch" onclick="clearSearch()" style="display:none;">✕</button>
+    </div>
+
+    <!-- Genre Filter -->
+    <div class="genre-filter" id="genreFilter">
+      <button class="filter-chip active" onclick="filterByGenre('', this)">All</button>
+    </div>
+
+    <!-- Search Results -->
+    <div id="searchResults" class="hidden">
+      <div class="section-header">
+        <h3 class="section-title" id="searchResultsTitle">Search Results</h3>
+      </div>
+      <div class="movies-grid" id="searchResultsGrid"></div>
+    </div>
+
+    <!-- Normal content (hidden during search) -->
+    <div id="normalContent">
+      <!-- Recommendations (only for logged in) -->
+      <div class="section" id="recommendationsSection" style="display:none;">
+        <div class="section-header">
+          <h3 class="section-title">🎯 For You</h3>
+        </div>
+        <div class="movies-row" id="recommendedMovies"></div>
+      </div>
+
+      <!-- Trending -->
+      <div class="section">
+        <div class="section-header">
+          <h3 class="section-title">🔥 Trending Now</h3>
+        </div>
+        <div class="movies-row" id="trendingMovies">
+          <div class="skeleton skeleton-card" style="min-width:160px;"></div>
+          <div class="skeleton skeleton-card" style="min-width:160px;"></div>
+          <div class="skeleton skeleton-card" style="min-width:160px;"></div>
+        </div>
+      </div>
+
+      <!-- All Movies -->
+      <div class="section">
+        <div class="section-header">
+          <h3 class="section-title" id="allMoviesTitle">All Movies</h3>
+        </div>
+        <div class="movies-grid" id="allMovies"></div>
+        <div class="text-center mt-3" id="loadMoreContainer" style="display:none;">
+          <button class="btn btn-secondary" onclick="loadMoreMovies()">Load More</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-profile" class="page">
+  <div class="profile-page">
+    <div class="profile-header">
+      <div class="profile-avatar" id="profileAvatar">U</div>
+      <div class="profile-info">
+        <h2 id="profileName">User</h2>
+        <p id="profileEmail">user@example.com</p>
+        <p style="color:var(--text3);font-size:13px;margin-top:4px;" id="profileJoined"></p>
+        <div class="profile-stats">
+          <div class="profile-stat">Watchlist: <strong id="statWatchlist">0</strong></div>
+          <div class="profile-stat">Favorites: <strong id="statFavorites">0</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Genre Preferences -->
+    <div class="profile-section">
+      <h3>Genre Preferences</h3>
+      <p style="color:var(--text2);font-size:14px;margin-bottom:16px;">Select your favorite genres to get better recommendations.</p>
+      <div class="pref-grid" id="genrePrefs"></div>
+      <button class="btn btn-primary btn-sm mt-2" onclick="savePreferences()">Save Preferences</button>
+    </div>
+
+    <!-- Favorites -->
+    <div class="profile-section">
+      <h3>❤️ Favorites</h3>
+      <div class="movies-grid" id="profileFavorites">
+        <div class="empty-state"><div class="emoji">🎬</div><p>No favorites yet</p></div>
+      </div>
+    </div>
+
+    <!-- Watchlist -->
+    <div class="profile-section">
+      <h3>📋 Watchlist</h3>
+      <div class="movies-grid" id="profileWatchlist">
+        <div class="empty-state"><div class="emoji">📋</div><p>Your watchlist is empty</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Movie Modal -->
+<div class="modal-overlay hidden" id="movieModal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-backdrop" id="modalBackdrop">
+      <div class="modal-backdrop-overlay"></div>
+      <button class="modal-close" onclick="closeMovieModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <h2 class="modal-title" id="modalTitle"></h2>
+      <div class="modal-meta" id="modalMeta"></div>
+      <p class="modal-overview" id="modalOverview"></p>
+      <div class="modal-cast" id="modalCast"></div>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONFIG — OMDB API
+// ═══════════════════════════════════════════════════════
+const OMDB_KEY  = 'a29b2451';
+const OMDB_BASE = 'https://www.omdbapi.com/';
+const BACKEND   = 'http://localhost:5000/api'; // optional — used only when running the Node server
+
+const GENRES = ['Action','Adventure','Animation','Biography','Comedy','Crime',
+                'Drama','Family','Fantasy','History','Horror','Music',
+                'Mystery','Romance','Sci-Fi','Thriller','Western'];
+
+// Curated title lists powering each section of the app
+const TRENDING_TITLES = [
+  'Inception','The Dark Knight','Interstellar','Oppenheimer','Dune: Part Two',
+  'Avengers: Endgame','Everything Everywhere All at Once','The Batman',
+  'Top Gun: Maverick','Spider-Man: No Way Home'
+];
+
+// Genre → representative titles (used for genre filter & recommendations)
+const GENRE_TITLES = {
+  Action:      ['Mad Max: Fury Road','John Wick','Mission: Impossible – Fallout','Die Hard','The Raid'],
+  Adventure:   ['Indiana Jones and the Raiders of the Lost Ark','Jurassic Park','The Revenant','Cast Away','Wild'],
+  Animation:   ['Spirited Away','WALL-E','Coco','The Lion King','Into the Spider-Verse'],
+  Biography:   ['Bohemian Rhapsody','The Social Network','Schindler\'s List','Jobs','Ford v Ferrari'],
+  Comedy:      ['The Grand Budapest Hotel','Superbad','Knives Out','Game Night','The Nice Guys'],
+  Crime:       ['Pulp Fiction','The Godfather','Goodfellas','No Country for Old Men','Heat'],
+  Drama:       ['The Shawshank Redemption','Parasite','Marriage Story','Moonlight','12 Years a Slave'],
+  Family:      ['Paddington 2','Encanto','The Incredibles','Moana','How to Train Your Dragon'],
+  Fantasy:     ['Pan\'s Labyrinth','The Princess Bride','Big Fish','Stardust','Willow'],
+  History:     ['Dunkirk','Lincoln','Braveheart','The King\'s Speech','Gandhi'],
+  Horror:      ['Get Out','Hereditary','A Quiet Place','The Witch','Midsommar'],
+  Music:       ['Whiplash','Almost Famous','Rocketman','La La Land','8 Mile'],
+  Mystery:     ['Prisoners','Gone Girl','Shutter Island','Zodiac','The Girl with the Dragon Tattoo'],
+  Romance:     ['Before Sunrise','Eternal Sunshine of the Spotless Mind','Normal People','Her','About Time'],
+  'Sci-Fi':    ['Arrival','2001: A Space Odyssey','Ex Machina','Blade Runner 2049','The Martian'],
+  Thriller:    ['Parasite','Gone Girl','Sicario','Nightcrawler','Uncut Gems'],
+  Western:     ['No Country for Old Men','True Grit','Django Unchained','Tombstone','Unforgiven']
+};
+
+// All browse titles (shown in "All Movies" grid by default)
+const ALL_TITLES = [
+  'Inception','The Dark Knight','Interstellar','Parasite','The Shawshank Redemption',
+  'Avengers: Endgame','Spirited Away','Dune: Part Two','Oppenheimer',
+  'Everything Everywhere All at Once','Pulp Fiction','Get Out',
+  'The Grand Budapest Hotel','Mad Max: Fury Road','Arrival',
+  'Knives Out','The Godfather','Goodfellas','Schindler\'s List','Whiplash',
+  'Gone Girl','The Martian','La La Land','Hereditary','Moonlight',
+  'Blade Runner 2049','A Quiet Place','Marriage Story','Joker','1917'
+];
+
+// ── In-memory store for watchlist/favorites (persisted to localStorage) ──
+let localWatchlist = JSON.parse(localStorage.getItem('cm_watchlist') || '[]');
+// shape: [{ movieId, type, movie }]
+
+// ── OMDB movie cache: imdbID → full movie object ──
+const omdbCache = {};
+
+let state = {
+  user:           null,
+  token:          null,
+  currentPage:    'landing',
+  movies:         [],          // currently rendered all-movies list
+  trendingMovies: [],
+  omdbPage:       1,           // which chunk of ALL_TITLES we're on
+  currentGenre:   '',
+  searchTimeout:  null,
+  selectedGenres: [],          // register form
+  profileGenres:  []           // profile prefs editor
+};
+
+// ═══════════════════════════════════════════════════════
+// OMDB HELPERS
+// ═══════════════════════════════════════════════════════
+
+/** Fetch a single movie by title from OMDB */
+async function omdbByTitle(title) {
+  if (omdbCache[title]) return omdbCache[title];
+  try {
+    const url = `${OMDB_BASE}?apikey=${OMDB_KEY}&t=${encodeURIComponent(title)}&type=movie&plot=full`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.Response === 'True') {
+      const m = normaliseOmdb(data);
+      omdbCache[m._id] = m;
+      omdbCache[title]  = m;   // also cache by title for quick lookup
+      return m;
+    }
+  } catch (_) {}
+  return null;
+}
+
+/** Fetch a single movie by IMDB ID from OMDB */
+async function omdbById(imdbId) {
+  if (omdbCache[imdbId]) return omdbCache[imdbId];
+  try {
+    const url = `${OMDB_BASE}?apikey=${OMDB_KEY}&i=${imdbId}&type=movie&plot=full`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.Response === 'True') {
+      const m = normaliseOmdb(data);
+      omdbCache[imdbId] = m;
+      return m;
+    }
+  } catch (_) {}
+  return null;
+}
+
+/** Search OMDB by keyword — returns array of results (basic info, no full plot) */
+async function omdbSearch(query, page = 1) {
+  try {
+    const url = `${OMDB_BASE}?apikey=${OMDB_KEY}&s=${encodeURIComponent(query)}&type=movie&page=${page}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.Response === 'True') {
+      // Enrich each result with full details
+      const full = await Promise.all(
+        data.Search.slice(0, 12).map(r => omdbById(r.imdbID))
+      );
+      return full.filter(Boolean);
+    }
+  } catch (_) {}
+  return [];
+}
+
+/** Fetch multiple titles in parallel (with concurrency cap) */
+async function omdbMulti(titles, cap = 6) {
+  const results = [];
+  for (let i = 0; i < titles.length; i += cap) {
+    const batch = await Promise.all(titles.slice(i, i + cap).map(omdbByTitle));
+    results.push(...batch.filter(Boolean));
+  }
+  return results;
+}
+
+/** Convert raw OMDB response → internal movie shape */
+function normaliseOmdb(d) {
+  const rating = parseFloat(d.imdbRating) || 0;
+  const genres = d.Genre
+    ? d.Genre.split(',').map(g => g.trim()).filter(Boolean)
+    : [];
+  const cast = d.Actors
+    ? d.Actors.split(',').map(a => a.trim()).filter(a => a !== 'N/A')
+    : [];
+  const year = parseInt(d.Year) || null;
+  const runtime = parseInt((d.Runtime || '').replace(' min', '')) || 0;
+
+  return {
+    _id:         d.imdbID,                                    // use imdbID as our internal ID
+    imdbID:      d.imdbID,
+    title:       d.Title,
+    overview:    d.Plot !== 'N/A' ? d.Plot : 'No description available.',
+    genres,
+    language:    d.Language ? d.Language.split(',')[0].trim() : 'English',
+    releaseYear: year,
+    rating,
+    voteCount:   parseInt((d.imdbVotes || '0').replace(/,/g, '')) || 0,
+    posterPath:  d.Poster !== 'N/A' ? d.Poster : '',
+    backdropPath:'',                                           // OMDB has no backdrop
+    director:    d.Director !== 'N/A' ? d.Director : 'Unknown',
+    cast,
+    runtime,
+    rated:       d.Rated !== 'N/A' ? d.Rated : '',
+    awards:      d.Awards !== 'N/A' ? d.Awards : '',
+    boxOffice:   d.BoxOffice !== 'N/A' ? d.BoxOffice : '',
+    popularity:  rating * 10,
+    trending:    false,                                        // set explicitly by caller
+    country:     d.Country !== 'N/A' ? d.Country : ''
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const token = localStorage.getItem('cmToken');
+  const user  = localStorage.getItem('cmUser');
+  if (token && user) {
+    state.token = token;
+    state.user  = JSON.parse(user);
+  }
+  renderNav();
+  setupEnterKeyListeners();
+  const hash = window.location.hash.replace('#', '') || 'landing';
+  navigate(hash);
+});
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function navigate(page) {
+  if (page === 'profile' && !state.user) {
+    showToast('Please log in first', 'error');
+    page = 'login';
+  }
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById(`page-${page}`);
+  if (el) {
+    el.classList.add('active');
+    state.currentPage = page;
+    window.location.hash = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'profile' && state.user) loadProfile();
+  if (page === 'register') renderRegisterGenres();
+  renderNav();
+  document.getElementById('navLinks').classList.remove('mobile-open');
+}
+
+function renderNav() {
+  const links     = document.getElementById('navLinks');
+  const isLoggedIn = !!state.user;
+  links.innerHTML = `
+    <div class="nav-search">
+      <span>🔍</span>
+      <input type="text" placeholder="Quick search…"
+        onkeyup="if(event.key==='Enter'){navigate('dashboard');setTimeout(()=>quickSearch(this.value),120)}" />
+    </div>
+    ${isLoggedIn ? `
+      <button class="nav-btn nav-btn-ghost" onclick="navigate('dashboard')">Dashboard</button>
+      <button class="nav-btn nav-btn-ghost" onclick="navigate('profile')">Profile</button>
+      <button class="avatar-btn" onclick="navigate('profile')" title="${state.user.name}">
+        ${state.user.name.charAt(0).toUpperCase()}
+      </button>
+      <button class="nav-btn nav-btn-ghost" onclick="logout()">Logout</button>
+    ` : `
+      <button class="nav-btn nav-btn-ghost" onclick="navigate('dashboard')">Browse</button>
+      <button class="nav-btn nav-btn-ghost" onclick="navigate('login')">Login</button>
+      <button class="nav-btn nav-btn-primary" onclick="navigate('register')">Sign Up</button>
+    `}`;
+}
+
+function toggleMobileMenu() {
+  document.getElementById('navLinks').classList.toggle('mobile-open');
+}
+
+// ═══════════════════════════════════════════════════════
+// OPTIONAL BACKEND HELPER (used only for auth + watchlist when server is running)
+// ═══════════════════════════════════════════════════════
+async function apiCall(endpoint, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (state.token && state.token !== 'demo-token')
+    opts.headers['Authorization'] = `Bearer ${state.token}`;
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res  = await fetch(`${BACKEND}${endpoint}`, opts);
+    const data = await res.json();
+    return { ok: res.ok, data };
+  } catch (_) {
+    return { ok: false, data: { message: 'backend-unavailable' } };
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════
+async function handleLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const btn      = document.getElementById('loginBtn');
+  const err      = document.getElementById('loginError');
+  if (!email || !password) { showErr(err, 'Please fill all fields'); return; }
+
+  btn.disabled = true; btn.textContent = 'Signing in…';
+
+  const { ok, data } = await apiCall('/auth/login', 'POST', { email, password });
+  if (ok) {
+    setSession(data.token, data.user);
+    showToast('Welcome back, ' + data.user.name + '!', 'success');
+    navigate('dashboard');
+  } else {
+    // Always allow demo login so the app works without a running server
+    const demoUser = {
+      _id: 'demo', name: 'Demo User', email,
+      preferences: { genres: [], languages: ['English'] },
+      createdAt: new Date().toISOString()
+    };
+    setSession('demo-token', demoUser);
+    showToast('Logged in (demo mode) 🎬', 'info');
+    navigate('dashboard');
+  }
+  btn.disabled = false; btn.textContent = 'Sign In';
+}
+
+async function handleRegister() {
+  const name     = document.getElementById('regName').value.trim();
+  const email    = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const btn      = document.getElementById('registerBtn');
+  const err      = document.getElementById('registerError');
+  if (!name || !email || !password) { showErr(err, 'Please fill all fields'); return; }
+  if (password.length < 6) { showErr(err, 'Password must be at least 6 characters'); return; }
+
+  btn.disabled = true; btn.textContent = 'Creating account…';
+
+  const { ok, data } = await apiCall('/auth/register', 'POST', {
+    name, email, password,
+    preferences: { genres: state.selectedGenres, languages: ['English'] }
+  });
+
+  if (ok) {
+    setSession(data.token, data.user);
+    showToast('Welcome to CineMatch, ' + data.user.name + '!', 'success');
+  } else {
+    const demoUser = {
+      _id: 'demo', name, email,
+      preferences: { genres: state.selectedGenres, languages: ['English'] },
+      createdAt: new Date().toISOString()
+    };
+    setSession('demo-token', demoUser);
+    showToast('Account created (demo mode) 🎬', 'info');
+  }
+  navigate('dashboard');
+  btn.disabled = false; btn.textContent = 'Create Account';
+}
+
+function setSession(token, user) {
+  state.token = token; state.user = user;
+  localStorage.setItem('cmToken', token);
+  localStorage.setItem('cmUser', JSON.stringify(user));
+}
+
+function logout() {
+  state.token = null; state.user = null;
+  localStorage.removeItem('cmToken');
+  localStorage.removeItem('cmUser');
+  renderNav();
+  showToast('Logged out', 'info');
+  navigate('landing');
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+async function loadDashboard() {
+  const hour  = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('dashWelcome').textContent =
+    state.user ? `${greet}, ${state.user.name}!` : `${greet}!`;
+  document.getElementById('dashTitle').textContent =
+    state.user ? 'Your Movie Dashboard' : 'Discover Movies';
+
+  // Reset pagination
+  state.omdbPage = 1;
+  state.currentGenre = '';
+
+  // Build genre filter chips
+  buildGenreFilter();
+
+  // Load all three sections in parallel
+  await Promise.all([loadTrending(), loadAllMovies()]);
+
+  if (state.user) {
+    document.getElementById('recommendationsSection').style.display = 'block';
+    loadRecommendations();
+  }
+}
+
+// ── Trending ──────────────────────────────────────────
+async function loadTrending() {
+  showSkeletons('trendingMovies', 6);
+  const movies = await omdbMulti(TRENDING_TITLES);
+  movies.forEach(m => m.trending = true);
+  state.trendingMovies = movies;
+  renderMoviesRow('trendingMovies', movies);
+}
+
+// ── All Movies (paginated in chunks of 10) ────────────
+const PAGE_SIZE = 10;
+async function loadAllMovies(genre = '') {
+  showSkeletons('allMovies', 10);
+
+  let titles;
+  if (genre && GENRE_TITLES[genre]) {
+    titles = GENRE_TITLES[genre];
+    document.getElementById('loadMoreContainer').style.display = 'none';
+  } else {
+    const start = (state.omdbPage - 1) * PAGE_SIZE;
+    titles = ALL_TITLES.slice(start, start + PAGE_SIZE);
+    document.getElementById('loadMoreContainer').style.display =
+      start + PAGE_SIZE < ALL_TITLES.length ? 'block' : 'none';
+  }
+
+  const newMovies = await omdbMulti(titles);
+
+  if (state.omdbPage === 1 || genre) {
+    state.movies = newMovies;
+  } else {
+    state.movies = [...state.movies, ...newMovies];
+  }
+  renderMoviesGrid('allMovies', state.movies);
+}
+
+async function loadMoreMovies() {
+  state.omdbPage++;
+  const start = (state.omdbPage - 1) * PAGE_SIZE;
+  const titles = ALL_TITLES.slice(start, start + PAGE_SIZE);
+  document.getElementById('loadMoreContainer').style.display =
+    start + PAGE_SIZE < ALL_TITLES.length ? 'block' : 'none';
+  const more = await omdbMulti(titles);
+  state.movies = [...state.movies, ...more];
+  renderMoviesGrid('allMovies', state.movies);
+}
+
+// ── Recommendations ───────────────────────────────────
+async function loadRecommendations() {
+  const prefs = state.user?.preferences?.genres || [];
+  showSkeletons('recommendedMovies', 6, true);
+
+  let picks = [];
+  if (prefs.length > 0) {
+    // Fetch a few titles per preferred genre
+    const pool = prefs.flatMap(g => (GENRE_TITLES[g] || []).slice(0, 3));
+    // Remove duplicates and shuffle
+    const unique = [...new Set(pool)].sort(() => Math.random() - 0.5).slice(0, 10);
+    picks = await omdbMulti(unique);
+  }
+
+  if (picks.length < 4) {
+    // Top-rated fallback
+    const fallback = await omdbMulti(
+      ['The Godfather','Schindler\'s List','The Dark Knight','Pulp Fiction','12 Angry Men']
+    );
+    picks = [...picks, ...fallback].slice(0, 10);
+  }
+  renderMoviesRow('recommendedMovies', picks);
+}
+
+// ── Genre Filter ──────────────────────────────────────
+function buildGenreFilter() {
+  const filter = document.getElementById('genreFilter');
+  filter.innerHTML = `<button class="filter-chip active" onclick="filterByGenre('',this)">All</button>`;
+  GENRES.forEach(g => {
+    const btn = document.createElement('button');
+    btn.className  = 'filter-chip';
+    btn.textContent = g;
+    btn.onclick = () => filterByGenre(g, btn);
+    filter.appendChild(btn);
+  });
+}
+
+async function filterByGenre(genre, btn) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  state.currentGenre = genre;
+  state.omdbPage = 1;
+  document.getElementById('allMoviesTitle').textContent = genre || 'All Movies';
+  await loadAllMovies(genre);
+}
+
+// ═══════════════════════════════════════════════════════
+// SEARCH  (uses OMDB &s= endpoint)
+// ═══════════════════════════════════════════════════════
+function debounceSearch(val) {
+  clearTimeout(state.searchTimeout);
+  document.getElementById('clearSearch').style.display = val ? 'flex' : 'none';
+  if (!val.trim()) { clearSearch(); return; }
+  state.searchTimeout = setTimeout(() => performSearch(val), 500);
+}
+
+async function performSearch(q) {
+  document.getElementById('searchResults').classList.remove('hidden');
+  document.getElementById('normalContent').style.display = 'none';
+  document.getElementById('searchResultsTitle').textContent = `Results for "${q}"`;
+
+  // Show loading skeletons while waiting
+  showSkeletons('searchResultsGrid', 8);
+
+  const movies = await omdbSearch(q);
+
+  if (!movies.length) {
+    document.getElementById('searchResultsGrid').innerHTML =
+      `<div class="empty-state" style="grid-column:1/-1">
+         <div class="emoji">🔍</div><p>No movies found for "<strong>${q}</strong>"</p>
+       </div>`;
+  } else {
+    renderMoviesGrid('searchResultsGrid', movies);
+  }
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('clearSearch').style.display = 'none';
+  document.getElementById('searchResults').classList.add('hidden');
+  document.getElementById('normalContent').style.display = 'block';
+}
+
+function quickSearch(val) {
+  if (val.trim()) {
+    document.getElementById('searchInput').value = val;
+    document.getElementById('clearSearch').style.display = 'flex';
+    performSearch(val);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER HELPERS
+// ═══════════════════════════════════════════════════════
+function showSkeletons(containerId, count, isRow = false) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const style = isRow ? 'min-width:160px;flex-shrink:0;' : '';
+  el.innerHTML = Array(count).fill(0)
+    .map(() => `<div class="skeleton skeleton-card" style="${style}"></div>`).join('');
+}
+
+function renderMoviesGrid(containerId, movies) {
+  const el = document.getElementById(containerId);
+  if (!movies.length) {
+    el.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="emoji">🎬</div><p>No movies found</p></div>`;
+    return;
+  }
+  el.innerHTML = movies.map(m => movieCardHTML(m)).join('');
+}
+
+function renderMoviesRow(containerId, movies) {
+  const el = document.getElementById(containerId);
+  if (!movies.length) {
+    el.innerHTML = `<div class="empty-state"><p>No movies</p></div>`;
+    return;
+  }
+  el.innerHTML = movies.map(m => movieCardHTML(m, true)).join('');
+}
+
+function movieCardHTML(movie, compact = false) {
+  const safeId = CSS.escape ? CSS.escape(movie._id) : movie._id;
+  const poster  = movie.posterPath
+    ? `<img class="movie-poster" src="${movie.posterPath}" alt="${movie.title}"
+         loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    : '';
+  const placeholder = `<div class="movie-poster-placeholder" ${movie.posterPath ? 'style="display:none"' : ''}>🎬</div>`;
+  const genres  = (movie.genres || []).slice(0, 2).map(g => `<span class="genre-badge">${g}</span>`).join('');
+  const wlState = localWatchlist.find(w => w.movieId === movie._id && w.type === 'watchlist');
+  const fvState = localWatchlist.find(w => w.movieId === movie._id && w.type === 'favorite');
+
+  return `
+    <div class="movie-card" onclick="openMovieModal('${movie._id}')">
+      ${movie.trending ? '<div class="trending-badge">🔥 Hot</div>' : ''}
+      <div class="movie-actions">
+        ${state.user ? `
+          <button class="action-btn ${fvState ? 'active' : ''}"
+            onclick="event.stopPropagation();toggleList('${movie._id}','favorite')"
+            title="Favorite" id="fav-${movie._id}">♥</button>
+          <button class="action-btn ${wlState ? 'active' : ''}"
+            onclick="event.stopPropagation();toggleList('${movie._id}','watchlist')"
+            title="Watchlist" id="wl-${movie._id}">🔖</button>
+        ` : `<button class="action-btn" onclick="event.stopPropagation();navigate('login')" title="Login to save">🔒</button>`}
+      </div>
+      ${poster}${placeholder}
+      <div class="movie-info">
+        <div class="movie-title">${movie.title}</div>
+        <div class="movie-meta">
+          <span class="movie-rating">⭐ ${movie.rating ? movie.rating.toFixed(1) : 'N/A'}</span>
+          <span class="movie-year">${movie.releaseYear || ''}</span>
+        </div>
+        ${!compact ? `<div class="movie-genres">${genres}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// MOVIE MODAL  — fetches rich detail from OMDB by imdbID
+// ═══════════════════════════════════════════════════════
+let currentModalMovie = null;
+
+async function openMovieModal(imdbId) {
+  const modal = document.getElementById('movieModal');
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Show loading state in modal
+  document.getElementById('modalTitle').textContent    = 'Loading…';
+  document.getElementById('modalMeta').innerHTML       = '';
+  document.getElementById('modalOverview').textContent = '';
+  document.getElementById('modalCast').innerHTML       = '';
+  document.getElementById('modalActions').innerHTML    = '';
+  document.getElementById('modalBackdrop').innerHTML   =
+    `<div style="height:100%;background:var(--bg3);display:flex;align-items:center;justify-content:center;">
+       <div class="spinner"></div>
+     </div>
+     <div class="modal-backdrop-overlay"></div>
+     <button class="modal-close" onclick="closeMovieModal()">✕</button>`;
+
+  // Fetch from cache or OMDB
+  let movie = omdbCache[imdbId]
+    || [...state.movies, ...state.trendingMovies].find(m => m._id === imdbId)
+    || await omdbById(imdbId);
+
+  if (!movie) { closeMovieModal(); showToast('Could not load movie', 'error'); return; }
+  currentModalMovie = movie;
+
+  // Poster as backdrop (OMDB has no separate backdrop)
+  const backdropSrc = movie.posterPath;
+  const backdrop = document.getElementById('modalBackdrop');
+  if (backdropSrc) {
+    backdrop.innerHTML =
+      `<img class="modal-backdrop-img" src="${backdropSrc}" alt="${movie.title}"
+            style="object-position:top;">
+       <div class="modal-backdrop-overlay"></div>
+       <button class="modal-close" onclick="closeMovieModal()">✕</button>`;
+  } else {
+    backdrop.innerHTML =
+      `<div style="height:100%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:64px;">🎬</div>
+       <div class="modal-backdrop-overlay"></div>
+       <button class="modal-close" onclick="closeMovieModal()">✕</button>`;
+  }
+
+  const wlState = localWatchlist.find(w => w.movieId === movie._id && w.type === 'watchlist');
+  const fvState = localWatchlist.find(w => w.movieId === movie._id && w.type === 'favorite');
+  const lkState = localWatchlist.find(w => w.movieId === movie._id && w.type === 'liked');
+
+  document.getElementById('modalTitle').textContent = movie.title;
+  document.getElementById('modalMeta').innerHTML = `
+    <span class="modal-rating">⭐ ${movie.rating ? movie.rating.toFixed(1) : 'N/A'}/10</span>
+    ${movie.releaseYear ? `<span>📅 ${movie.releaseYear}</span>` : ''}
+    ${movie.runtime     ? `<span>⏱ ${movie.runtime} min</span>` : ''}
+    ${movie.rated       ? `<span class="genre-badge">${movie.rated}</span>` : ''}
+    ${movie.language    ? `<span>🌐 ${movie.language}</span>` : ''}
+    <span style="color:var(--accent)">${(movie.genres || []).join(' · ')}</span>
+    ${movie.boxOffice   ? `<span style="color:var(--gold)">💰 ${movie.boxOffice}</span>` : ''}
+    ${movie.awards      ? `<span style="color:var(--text2);font-size:12px">🏆 ${movie.awards}</span>` : ''}
+  `;
+  document.getElementById('modalOverview').textContent = movie.overview;
+
+  const castHtml = (movie.cast || []).map(c => `<span class="cast-tag">${c}</span>`).join('');
+  const dirHtml  = movie.director && movie.director !== 'Unknown'
+    ? `<span class="cast-tag" style="border-color:var(--accent);color:var(--accent2)">🎬 ${movie.director}</span>`
+    : '';
+  document.getElementById('modalCast').innerHTML = dirHtml + castHtml;
+
+  const actions = document.getElementById('modalActions');
+  if (state.user) {
+    actions.innerHTML = `
+      <button class="btn btn-primary btn-sm ${fvState ? 'active' : ''}"
+        onclick="toggleList('${movie._id}','favorite')"
+        id="modal-fav-${movie._id}">
+        ${fvState ? '❤️ Favorited' : '♥ Favorite'}
+      </button>
+      <button class="btn btn-secondary btn-sm ${wlState ? 'active' : ''}"
+        onclick="toggleList('${movie._id}','watchlist')"
+        id="modal-wl-${movie._id}">
+        ${wlState ? '✅ In Watchlist' : '🔖 Watchlist'}
+      </button>
+      <button class="btn btn-secondary btn-sm ${lkState ? 'active' : ''}"
+        onclick="toggleList('${movie._id}','liked')"
+        id="modal-lk-${movie._id}">
+        ${lkState ? '👍 Liked' : '👍 Like'}
+      </button>
+    `;
+  } else {
+    actions.innerHTML =
+      `<button class="btn btn-primary btn-sm" onclick="navigate('login')">Login to save</button>`;
+  }
+}
+
+function closeMovieModal() {
+  document.getElementById('movieModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function closeModal(e) {
+  if (e.target === document.getElementById('movieModal')) closeMovieModal();
+}
+
+// ═══════════════════════════════════════════════════════
+// WATCHLIST  (localStorage-backed; syncs to backend when available)
+// ═══════════════════════════════════════════════════════
+async function toggleList(movieId, type) {
+  if (!state.user) { navigate('login'); return; }
+
+  const movie  = currentModalMovie || omdbCache[movieId];
+  const idx    = localWatchlist.findIndex(w => w.movieId === movieId && w.type === type);
+
+  if (idx >= 0) {
+    // Remove
+    localWatchlist.splice(idx, 1);
+    showToast(`Removed from ${type}`, 'info');
+    // Try backend
+    apiCall(`/watchlist/${movieId}?type=${type}`, 'DELETE').catch(() => {});
+  } else {
+    // Add
+    localWatchlist.push({ movieId, type, movie,
+      addedAt: new Date().toISOString() });
+    showToast(`Added to ${type}!`, 'success');
+    // Try backend
+    if (movie) {
+      apiCall('/watchlist', 'POST', { movieId, type }).catch(() => {});
+    }
+  }
+
+  // Persist locally
+  localStorage.setItem('cm_watchlist', JSON.stringify(localWatchlist));
+
+  // Refresh all button states
+  refreshWatchlistButtons(movieId);
+
+  // Re-render modal actions if modal is open
+  if (currentModalMovie && currentModalMovie._id === movieId) {
+    openMovieModal(movieId);
+  }
+}
+
+function refreshWatchlistButtons(movieId) {
+  const fv = !!localWatchlist.find(w => w.movieId === movieId && w.type === 'favorite');
+  const wl = !!localWatchlist.find(w => w.movieId === movieId && w.type === 'watchlist');
+
+  [document.getElementById(`fav-${movieId}`),
+   document.getElementById(`modal-fav-${movieId}`)].forEach(btn => {
+    if (btn) btn.classList.toggle('active', fv);
+  });
+  [document.getElementById(`wl-${movieId}`),
+   document.getElementById(`modal-wl-${movieId}`)].forEach(btn => {
+    if (btn) btn.classList.toggle('active', wl);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// PROFILE
+// ═══════════════════════════════════════════════════════
+async function loadProfile() {
+  if (!state.user) return;
+
+  document.getElementById('profileAvatar').textContent = state.user.name.charAt(0).toUpperCase();
+  document.getElementById('profileName').textContent   = state.user.name;
+  document.getElementById('profileEmail').textContent  = state.user.email;
+  document.getElementById('profileJoined').textContent =
+    'Member since ' + new Date(state.user.createdAt)
+      .toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+
+  state.profileGenres = [...(state.user.preferences?.genres || [])];
+  renderProfileGenres();
+
+  // Stats from local watchlist
+  const favs = localWatchlist.filter(w => w.type === 'favorite');
+  const wls  = localWatchlist.filter(w => w.type === 'watchlist');
+  document.getElementById('statFavorites').textContent = favs.length;
+  document.getElementById('statWatchlist').textContent = wls.length;
+
+  // Render saved movies
+  if (favs.length) {
+    const movies = favs.map(w => w.movie).filter(Boolean);
+    movies.length
+      ? renderMoviesGrid('profileFavorites', movies)
+      : (document.getElementById('profileFavorites').innerHTML =
+          `<div class="empty-state"><div class="emoji">🎬</div><p>No favorites yet</p></div>`);
+  }
+  if (wls.length) {
+    const movies = wls.map(w => w.movie).filter(Boolean);
+    movies.length
+      ? renderMoviesGrid('profileWatchlist', movies)
+      : (document.getElementById('profileWatchlist').innerHTML =
+          `<div class="empty-state"><div class="emoji">📋</div><p>Watchlist is empty</p></div>`);
+  }
+}
+
+function renderProfileGenres() {
+  document.getElementById('genrePrefs').innerHTML = GENRES.map(g => `
+    <div class="pref-chip ${state.profileGenres.includes(g) ? 'active' : ''}"
+         onclick="toggleProfileGenre('${g}',this)">${g}</div>`).join('');
+}
+
+function toggleProfileGenre(genre, el) {
+  if (state.profileGenres.includes(genre)) {
+    state.profileGenres = state.profileGenres.filter(g => g !== genre);
+    el.classList.remove('active');
+  } else {
+    state.profileGenres.push(genre);
+    el.classList.add('active');
+  }
+}
+
+async function savePreferences() {
+  const { ok, data } = await apiCall('/auth/preferences', 'PUT',
+    { genres: state.profileGenres, languages: ['English'] });
+
+  if (ok) {
+    state.user = data.user;
+    localStorage.setItem('cmUser', JSON.stringify(data.user));
+  } else {
+    // Save locally
+    state.user.preferences.genres = state.profileGenres;
+    localStorage.setItem('cmUser', JSON.stringify(state.user));
+  }
+  showToast('Preferences saved! Recommendations will update.', 'success');
+}
+
+// ═══════════════════════════════════════════════════════
+// REGISTER — genre chips
+// ═══════════════════════════════════════════════════════
+function renderRegisterGenres() {
+  document.getElementById('regGenres').innerHTML = GENRES.map(g => `
+    <div class="genre-chip ${state.selectedGenres.includes(g) ? 'selected' : ''}"
+         onclick="toggleRegGenre('${g}',this)">${g}</div>`).join('');
+}
+
+function toggleRegGenre(genre, el) {
+  if (state.selectedGenres.includes(genre)) {
+    state.selectedGenres = state.selectedGenres.filter(g => g !== genre);
+    el.classList.remove('selected');
+  } else {
+    state.selectedGenres.push(genre);
+    el.classList.add('selected');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════
+function showToast(msg, type = 'info', duration = 3000) {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toastContainer').appendChild(toast);
+  setTimeout(() => {
+    toast.style.cssText += 'opacity:0;transform:translateX(100%);transition:all 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+function showErr(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+function setupEnterKeyListeners() {
+  document.getElementById('loginPassword')
+    .addEventListener('keyup', e => { if (e.key === 'Enter') handleLogin(); });
+  document.getElementById('loginEmail')
+    .addEventListener('keyup', e => { if (e.key === 'Enter') handleLogin(); });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeMovieModal();
+});
+</script>
+</body>
+</html>
