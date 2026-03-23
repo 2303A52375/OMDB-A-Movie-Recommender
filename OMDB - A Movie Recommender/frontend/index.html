@@ -569,8 +569,8 @@
     </div>
   </section>
   <!-- Features -->
-  <section class="features-section">
-    <h2 class="section-title text-center">Why CineMatch?</h2>
+    <section class="features" id="features">
+        <h2 class="section-title text-center">Why OMDB?</h2>
     <div class="features-grid">
       <div class="feature-card"><div class="feature-icon">🎯</div><h3 class="feature-title">Smart Recommendations</h3><p class="feature-desc">Content-based filtering learns your genre preferences and suggests movies you'll actually love.</p></div>
       <div class="feature-card"><div class="feature-icon">🔥</div><h3 class="feature-title">Trending Now</h3><p class="feature-desc">Stay current with what's hot. See what's trending globally and among your genre preferences.</p></div>
@@ -585,7 +585,7 @@
     <div class="auth-card">
       <div class="auth-header">
         <h2>Welcome Back</h2>
-        <p>Sign in to your CineMatch account</p>
+        <p>Sign in to your OMDB account</p>
       </div>
       <div id="loginError" class="form-error" style="margin-bottom:16px;display:none;"></div>
       <div class="form-group">
@@ -610,7 +610,7 @@
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-header">
-        <h2>Join CineMatch</h2>
+        <h2>Join OMDB</h2>
         <p>Create your account and start discovering</p>
       </div>
       <div id="registerError" class="form-error" style="margin-bottom:16px;display:none;"></div>
@@ -817,7 +817,7 @@ const ALL_TITLES = [
 ];
 
 // ── In-memory store for watchlist/favorites (persisted to localStorage) ──
-let localWatchlist = JSON.parse(localStorage.getItem('cm_watchlist') || '[]');
+let localWatchlist = JSON.parse(localStorage.getItem('omdb_watchlist') || '[]');
 // shape: [{ movieId, type, movie }]
 
 // ── OMDB movie cache: imdbID → full movie object ──
@@ -940,8 +940,8 @@ function normaliseOmdb(d) {
 // INIT
 // ═══════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-  const token = localStorage.getItem('cmToken');
-  const user  = localStorage.getItem('cmUser');
+  const token = localStorage.getItem('omdbToken');
+  const user  = localStorage.getItem('omdbUser');
   if (token && user) {
     state.token = token;
     state.user  = JSON.parse(user);
@@ -1068,7 +1068,7 @@ async function handleRegister() {
 
   if (ok) {
     setSession(data.token, data.user);
-    showToast('Welcome to CineMatch, ' + data.user.name + '!', 'success');
+    showToast('Welcome to OMDB, ' + data.user.name + '!', 'success');
   } else {
     const demoUser = {
       _id: 'demo', name, email,
@@ -1084,14 +1084,14 @@ async function handleRegister() {
 
 function setSession(token, user) {
   state.token = token; state.user = user;
-  localStorage.setItem('cmToken', token);
-  localStorage.setItem('cmUser', JSON.stringify(user));
+  localStorage.setItem('omdbToken', token);
+  localStorage.setItem('omdbUser', JSON.stringify(user));
 }
 
 function logout() {
   state.token = null; state.user = null;
-  localStorage.removeItem('cmToken');
-  localStorage.removeItem('cmUser');
+  localStorage.removeItem('omdbToken');
+  localStorage.removeItem('omdbUser');
   renderNav();
   showToast('Logged out', 'info');
   navigate('landing');
@@ -1456,7 +1456,7 @@ async function toggleList(movieId, type) {
   }
 
   // Persist locally
-  localStorage.setItem('cm_watchlist', JSON.stringify(localWatchlist));
+  localStorage.setItem('omdb_watchlist', JSON.stringify(localWatchlist));
 
   // Refresh all button states
   refreshWatchlistButtons(movieId);
@@ -1542,11 +1542,11 @@ async function savePreferences() {
 
   if (ok) {
     state.user = data.user;
-    localStorage.setItem('cmUser', JSON.stringify(data.user));
+    localStorage.setItem('omdbUser', JSON.stringify(data.user));
   } else {
     // Save locally
     state.user.preferences.genres = state.profileGenres;
-    localStorage.setItem('cmUser', JSON.stringify(state.user));
+    localStorage.setItem('omdbUser', JSON.stringify(state.user));
   }
   showToast('Preferences saved! Recommendations will update.', 'success');
 }

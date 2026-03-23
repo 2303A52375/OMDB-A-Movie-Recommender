@@ -1,4 +1,4 @@
-# 🎬 CineMatch — Movie Recommendation System
+# 🎬 OMDB - A Movie Recommender
 
 A full-stack MERN movie recommendation web app with JWT authentication, personalized recommendations, watchlist/favorites, genre filtering, and search. Works in **demo mode** even without MongoDB running.
 
@@ -36,7 +36,7 @@ movie-recommender/
 │   ├── Dockerfile
 │   └── nginx.conf
 ├── docker-compose.yml
-├── CineMatch-API.postman_collection.json
+├── OMDB - A Movie Recommender.json
 └── README.md
 ```
 
@@ -59,23 +59,28 @@ The frontend works standalone with built-in demo data.
 ### Option B — Full Stack (VS Code + Local MongoDB)
 
 #### Prerequisites
+
 - Node.js 18+ → https://nodejs.org
 - MongoDB Community → https://www.mongodb.com/try/download/community
 - VS Code → https://code.visualstudio.com
 
 #### Step 1 — Clone / Open Project
+
 ```bash
 cd movie-recommender
 ```
 
 #### Step 2 — Install Backend Dependencies
+
 ```bash
 cd backend
 npm install
 ```
 
 #### Step 3 — Configure Environment
+
 Edit `backend/.env` if needed (defaults work out of the box):
+
 ```env
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/movie_recommender
@@ -85,6 +90,7 @@ FRONTEND_URL=http://localhost:3000
 ```
 
 #### Step 4 — Start MongoDB
+
 ```bash
 # macOS (Homebrew)
 brew services start mongodb-community
@@ -97,11 +103,14 @@ sudo systemctl start mongod
 ```
 
 #### Step 5 — Seed the Database (15 sample movies)
+
 ```bash
 # From the backend/ directory
 npm run seed
 ```
+
 Expected output:
+
 ```
 ✅ MongoDB Connected: localhost
 🗑️  Cleared existing movies
@@ -109,10 +118,13 @@ Expected output:
 ```
 
 #### Step 6 — Start Backend Server
+
 ```bash
 npm run dev
 ```
+
 Expected output:
+
 ```
 🎬 Movie Recommender API
 🚀 Server running on http://localhost:5000
@@ -122,7 +134,9 @@ Expected output:
 ```
 
 #### Step 7 — Open Frontend
+
 Open `frontend/index.html` in your browser, OR serve it:
+
 ```bash
 # Simple HTTP server (Python)
 cd frontend
@@ -135,25 +149,30 @@ python3 -m http.server 3000
 ### Option C — Docker (Full Stack, One Command)
 
 #### Prerequisites
+
 - Docker Desktop → https://www.docker.com/products/docker-desktop
 
 #### Run Everything
+
 ```bash
 cd movie-recommender
 docker-compose up --build
 ```
 
 Then seed the database:
+
 ```bash
 docker exec movie_backend node config/seed.js
 ```
 
 #### Access
+
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5000/api
 - Health check: http://localhost:5000/api/health
 
 #### Stop
+
 ```bash
 docker-compose down
 # Remove volumes too:
@@ -165,21 +184,23 @@ docker-compose down -v
 ## 📡 API Reference
 
 ### Base URL
+
 ```
 http://localhost:5000/api
 ```
 
 ### 🔐 Authentication
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/auth/register` | No | Create account |
-| POST | `/auth/login` | No | Login, returns JWT |
-| GET | `/auth/me` | JWT | Get current user |
-| PUT | `/auth/preferences` | JWT | Update genre prefs |
-| PUT | `/auth/profile` | JWT | Update name/avatar |
+| Method | Endpoint            | Auth | Description        |
+| ------ | ------------------- | ---- | ------------------ |
+| POST   | `/auth/register`    | No   | Create account     |
+| POST   | `/auth/login`       | No   | Login, returns JWT |
+| GET    | `/auth/me`          | JWT  | Get current user   |
+| PUT    | `/auth/preferences` | JWT  | Update genre prefs |
+| PUT    | `/auth/profile`     | JWT  | Update name/avatar |
 
 **Register Body:**
+
 ```json
 {
   "name": "Jane Doe",
@@ -193,6 +214,7 @@ http://localhost:5000/api
 ```
 
 **Login Response:**
+
 ```json
 {
   "success": true,
@@ -202,6 +224,7 @@ http://localhost:5000/api
 ```
 
 **Using JWT:** Add to every protected request:
+
 ```
 Authorization: Bearer <your_token_here>
 ```
@@ -210,16 +233,17 @@ Authorization: Bearer <your_token_here>
 
 ### 🎬 Movies
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/movies` | No | All movies (paginated) |
-| GET | `/movies/trending` | No | Trending movies |
-| GET | `/movies/search?q=term` | No | Search movies |
-| GET | `/movies/genres` | No | List all genres |
-| GET | `/movies/recommendations` | JWT | Personalized picks |
-| GET | `/movies/:id` | No | Single movie detail |
+| Method | Endpoint                  | Auth | Description            |
+| ------ | ------------------------- | ---- | ---------------------- |
+| GET    | `/movies`                 | No   | All movies (paginated) |
+| GET    | `/movies/trending`        | No   | Trending movies        |
+| GET    | `/movies/search?q=term`   | No   | Search movies          |
+| GET    | `/movies/genres`          | No   | List all genres        |
+| GET    | `/movies/recommendations` | JWT  | Personalized picks     |
+| GET    | `/movies/:id`             | No   | Single movie detail    |
 
 **Query Parameters for `/movies`:**
+
 ```
 ?page=1         # Page number (default: 1)
 ?limit=12       # Items per page (default: 12)
@@ -231,15 +255,16 @@ Authorization: Bearer <your_token_here>
 
 ### 📋 Watchlist
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/watchlist` | JWT | Get user's list |
-| GET | `/watchlist?type=favorite` | JWT | Favorites only |
-| POST | `/watchlist` | JWT | Add movie |
-| GET | `/watchlist/check/:movieId` | JWT | Check if saved |
-| DELETE | `/watchlist/:movieId?type=watchlist` | JWT | Remove |
+| Method | Endpoint                             | Auth | Description     |
+| ------ | ------------------------------------ | ---- | --------------- |
+| GET    | `/watchlist`                         | JWT  | Get user's list |
+| GET    | `/watchlist?type=favorite`           | JWT  | Favorites only  |
+| POST   | `/watchlist`                         | JWT  | Add movie       |
+| GET    | `/watchlist/check/:movieId`          | JWT  | Check if saved  |
+| DELETE | `/watchlist/:movieId?type=watchlist` | JWT  | Remove          |
 
 **Add to List Body:**
+
 ```json
 {
   "movieId": "64abc...",
@@ -248,17 +273,19 @@ Authorization: Bearer <your_token_here>
   "notes": "All-time favorite!"
 }
 ```
+
 Types: `"favorite"` | `"watchlist"` | `"liked"`
 
 ---
 
 ## 🧪 Postman Testing
 
-1. Open Postman → **Import** → select `CineMatch-API.postman_collection.json`
+1. Open Postman → **Import** → select `OMDB - A Movie Recommender.json`
 2. The collection has a `token` variable that auto-saves on login
 3. Run requests in order: Register → Login → Protected routes
 
 **Test Flow:**
+
 ```
 1. POST /auth/register   → creates user
 2. POST /auth/login      → token auto-saved to collection variable
@@ -311,6 +338,7 @@ Express.js Server (port 5000)
 ```
 
 **MVC Pattern:**
+
 - **Models** — Mongoose schemas (User, Movie, Watchlist)
 - **Views** — Frontend HTML/JS (separate from backend)
 - **Controllers** — Business logic (auth, movies, watchlist)
@@ -332,24 +360,25 @@ Express.js Server (port 5000)
 
 ## 🎨 Frontend Features
 
-| Feature | Implementation |
-|---------|---------------|
-| Auth | JWT stored in localStorage |
-| Demo mode | Works without backend using MOCK_MOVIES |
-| Search | Debounced (400ms) regex search |
-| Genre filter | Dynamic from `/movies/genres` endpoint |
-| Movie cards | Hover actions (favorite/watchlist) |
-| Movie modal | Backdrop image, cast, full details |
-| Toast notifications | Auto-dismiss after 3s |
-| Skeleton loading | Shimmer animation placeholders |
-| Responsive | Mobile-first CSS Grid + Flexbox |
-| Animations | CSS keyframes, transitions |
+| Feature             | Implementation                          |
+| ------------------- | --------------------------------------- |
+| Auth                | JWT stored in localStorage              |
+| Demo mode           | Works without backend using MOCK_MOVIES |
+| Search              | Debounced (400ms) regex search          |
+| Genre filter        | Dynamic from `/movies/genres` endpoint  |
+| Movie cards         | Hover actions (favorite/watchlist)      |
+| Movie modal         | Backdrop image, cast, full details      |
+| Toast notifications | Auto-dismiss after 3s                   |
+| Skeleton loading    | Shimmer animation placeholders          |
+| Responsive          | Mobile-first CSS Grid + Flexbox         |
+| Animations          | CSS keyframes, transitions              |
 
 ---
 
 ## 🐛 Troubleshooting
 
 **MongoDB connection fails:**
+
 ```bash
 # Check if MongoDB is running
 mongosh --eval "db.adminCommand('ping')"
@@ -360,20 +389,24 @@ brew services start mongodb-community  # macOS
 ```
 
 **Port already in use:**
+
 ```bash
 # Find and kill process on port 5000
 lsof -ti:5000 | xargs kill -9
 ```
 
 **CORS errors in browser:**
+
 - Ensure `FRONTEND_URL` in `.env` matches your frontend URL exactly
 - Check that backend is running on port 5000
 
 **Movies not showing:**
+
 - Run `npm run seed` to populate the database
 - Check backend console for MongoDB connection status
 
 **JWT errors:**
+
 - Clear localStorage: `localStorage.clear()` in browser console
 - Re-login to get a fresh token
 
@@ -399,12 +432,14 @@ docker-compose down          # Stop all services
 ## 🔮 Extending the Project
 
 **Add TMDB live data:**
+
 1. Get free API key at https://www.themoviedb.org/settings/api
 2. Add `TMDB_API_KEY=your_key` to `.env`
 3. Create `controllers/tmdbController.js` to fetch from TMDB
 4. Replace seed data with live trending movies
 
 **Add user ratings:**
+
 ```javascript
 // Extend Watchlist model
 rating: { type: Number, min: 1, max: 5 }
@@ -412,6 +447,7 @@ rating: { type: Number, min: 1, max: 5 }
 ```
 
 **Add collaborative filtering:**
+
 - Find users with similar genre preferences
 - Recommend movies liked by similar users
 - Weight by cosine similarity of genre vectors
