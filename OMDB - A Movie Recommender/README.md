@@ -1,4 +1,4 @@
-# 🎬 CineMatch — Movie Recommendation System
+# 🎬 OMDB - A Movie Recommender
 
 A full-stack MERN movie recommendation web app with JWT authentication, personalized recommendations, watchlist/favorites, genre filtering, and search. Works in **demo mode** even without MongoDB running.
 
